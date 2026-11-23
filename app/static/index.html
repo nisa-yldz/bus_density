@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bus Density Analysis — Yolcu ve Yoğunluk Paneli</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #faf8ff;
+      --surface: #ffffff;
+      --surface-subtle: #f7f4fc;
+      --text: #1e1b2e;
+      --muted: #6b6480;
+      --border: #e9e2f5;
+      --accent: #6d28d9;
+      --accent-hover: #5b21b6;
+      --accent-soft: #f3e8ff;
+      --accent-border: #d8b4fe;
+      --ok-bg: #ecfdf5;
+      --ok-border: #a7f3d0;
+      --ok-text: #065f46;
+      --err-bg: #fef2f2;
+      --err-border: #fecaca;
+      --err-text: #991b1b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 28px 20px 44px;
+      line-height: 1.45;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 22px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .title-group h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #2e1065;
+    }
+
+    .title-group p {
+      margin: 4px 0 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .link-pill {
+      background: var(--surface);
+      color: var(--accent);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .link-pill:hover {
+      border-color: var(--accent-border);
+      background: var(--accent-soft);
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    @media (max-width: 760px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+    }
+
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 18px;
+      box-shadow: 0 2px 8px rgba(109, 40, 217, 0.04);
+    }
+
+    .kpi-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+
+    .kpi-value {
+      margin-top: 6px;
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: #3b0764;
+    }
+
+    .kpi-sub {
+      margin-top: 3px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 920px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(109, 40, 217, 0.04);
+    }
+
+    .card + .card {
+      margin-top: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #2e1065;
+    }
+
+    .card-tag {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      padding: 3px 9px;
+      border-radius: 999px;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: #4c4363;
+      margin-bottom: 6px;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 9px;
+      border: 1px solid #ddd4f0;
+      font-size: 0.92rem;
+      background: var(--surface);
+      color: var(--text);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.16);
+    }
+
+    .quick-inc {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .inc-btn {
+      padding: 6px 0;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-subtle);
+      color: #4c1d95;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .inc-btn:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent-border);
+    }
+
+    .primary-btn {
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 0.94rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .primary-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .feedback {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 9px;
+      font-size: 0.86rem;
+      display: none;
+      border: 1px solid transparent;
+    }
+
+    .feedback.ok {
+      display: block;
+      background: var(--ok-bg);
+      border-color: var(--ok-border);
+      color: var(--ok-text);
+    }
+
+    .feedback.err {
+      display: block;
+      background: var(--err-bg);
+      border-color: var(--err-border);
+      color: var(--err-text);
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: end;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .toolbar .field {
+      margin-bottom: 0;
+      flex: 1;
+      min-width: 170px;
+    }
+
+    .secondary-btn {
+      padding: 10px 16px;
+      border-radius: 9px;
+      border: 1px solid var(--accent-border);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s ease;
+    }
+
+    .secondary-btn:hover {
+      background: #e9d5ff;
+    }
+
+    .chart-box {
+      position: relative;
+      min-height: 250px;
+    }
+
+    .ranking-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .ranking-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface-subtle);
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .ranking-item:hover {
+      border-color: var(--accent-border);
+      background: #f5effe;
+    }
+
+    .ranking-item.active {
+      border-color: #a855f7;
+      background: var(--accent-soft);
+    }
+
+    .rank-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .rank-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      background: var(--surface);
+      color: var(--accent);
+      border: 1px solid var(--accent-border);
+    }
+
+    .ranking-item.active .rank-num {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .rank-title {
+      font-weight: 700;
+      font-size: 0.92rem;
+      color: #2e1065;
+    }
+
+    .rank-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .rank-badge {
+      background: var(--surface);
+      color: #4c1d95;
+      border: 1px solid var(--accent-border);
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title-group">
+        <h1>Bus Density Analysis</h1>
+        <p>Durak bazlı yolcu girişi, saatlik yoğunluk dağılımı ve hat sıralaması</p>
+      </div>
+      <div class="header-actions">
+        <a class="link-pill" href="/routes-ui">Hat &amp; Durak Yönetimi</a>
+        <a class="link-pill" href="/docs" target="_blank">API Dokümantasyonu</a>
+      </div>
+    </header>
+
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Seçili Gün Toplam Yolcu</div>
+        <div class="kpi-value" id="kpiTotalPassengers">0</div>
+        <div class="kpi-sub" id="kpiDateLabel">Bugün</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">En Yoğun Hat</div>
+        <div class="kpi-value" id="kpiTopRoute">—</div>
+        <div class="kpi-sub" id="kpiTopRouteSub">Kayıt bekleniyor</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Zirve Saat (Seçili Hat)</div>
+        <div class="kpi-value" id="kpiPeakHour">—</div>
+        <div class="kpi-sub" id="kpiPeakHourSub">Saatlik dağılım</div>
+      </div>
+    </section>
+
+    <div class="main-grid">
+      <!-- Sol Kolon: Yolcu Kaydı Formu -->
+      <section class="card">
+        <div class="card-header">
+          <h2>Yolcu Kaydı Ekle</h2>
+          <span class="card-tag">POST /records</span>
+        </div>
+
+        <form id="recordForm">
+          <div class="field">
+            <label for="routeSelect">Hat Seçimi</label>
+            <select id="routeSelect" required></select>
+          </div>
+
+          <div class="field">
+            <label for="stopSelect">Durak Seçimi</label>
+            <select id="stopSelect" required></select>
+          </div>
+
+          <div class="field">
+            <label for="passengerCount">Binen Yolcu Sayısı</label>
+            <input id="passengerCount" type="number" min="0" max="500" value="25" required />
+            <div class="quick-inc">
+              <button type="button" class="inc-btn" data-add="1">+1</button>
+              <button type="button" class="inc-btn" data-add="5">+5</button>
+              <button type="button" class="inc-btn" data-add="10">+10</button>
+              <button type="button" class="inc-btn" data-add="25">+25</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="recordedAt">Kayıt Zamanı (İsteğe Bağlı)</label>
+            <input id="recordedAt" type="datetime-local" />
+          </div>
+
+          <button type="submit" class="primary-btn">Kaydı Gönder</button>
+          <div id="formFeedback" class="feedback" role="status"></div>
+        </form>
+      </section>
+
+      <!-- Sağ Kolon: Saatlik Grafik + En Yoğun Hatlar -->
+      <div>
+        <section class="card">
+          <div class="card-header">
+            <h2>Saatlik Yoğunluk Grafiği</h2>
+            <span class="card-tag" id="chartRouteBadge">Hat seçilmedi</span>
+          </div>
+
+          <div class="toolbar">
+            <div class="field">
+              <label for="analysisDate">Analiz Tarihi</label>
+              <input id="analysisDate" type="date" />
+            </div>
+            <button id="refreshBtn" type="button" class="secondary-btn">Güncelle</button>
+          </div>
+
+          <div class="chart-box">
+            <canvas id="hourlyChart"></canvas>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h2>En Yoğun Hatlar</h2>
+            <span class="card-tag">Grafik için hatta tıkla</span>
+          </div>
+          <ul id="rankingList" class="ranking-list"></ul>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const routeSelect = document.getElementById("routeSelect");
+    const stopSelect = document.getElementById("stopSelect");
+    const passengerInput = document.getElementById("passengerCount");
+    const analysisDate = document.getElementById("analysisDate");
+    const formFeedback = document.getElementById("formFeedback");
+    const rankingList = document.getElementById("rankingList");
+    const chartRouteBadge = document.getElementById("chartRouteBadge");
+
+    const kpiTotalPassengers = document.getElementById("kpiTotalPassengers");
+    const kpiDateLabel = document.getElementById("kpiDateLabel");
+    const kpiTopRoute = document.getElementById("kpiTopRoute");
+    const kpiTopRouteSub = document.getElementById("kpiTopRouteSub");
+    const kpiPeakHour = document.getElementById("kpiPeakHour");
+    const kpiPeakHourSub = document.getElementById("kpiPeakHourSub");
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    analysisDate.value = todayStr;
+
+    let routesCache = [];
+    let chartInstance = null;
+
+    function showFeedback(message, isError = false) {
+      formFeedback.textContent = message;
+      formFeedback.className = "feedback " + (isError ? "err" : "ok");
+    }
+
+    document.querySelectorAll(".inc-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const current = Number(passengerInput.value) || 0;
+        const delta = Number(btn.dataset.add) || 0;
+        passengerInput.value = Math.min(500, current + delta);
+      });
+    });
+
+    async function loadRoutes() {
+      const res = await fetch("/routes");
+      routesCache = await res.json();
+      routeSelect.innerHTML = "";
+
+      for (const r of routesCache) {
+        const opt = document.createElement("option");
+        opt.value = r.id;
+        opt.textContent = `${r.code} — ${r.name}`;
+        routeSelect.appendChild(opt);
+      }
+
+      if (routesCache.length > 0) {
+        await loadStopsForRoute(routesCache[0].id);
+        await refreshAnalytics();
+      }
+    }
+
+    async function loadStopsForRoute(routeId) {
+      const res = await fetch(`/routes/${routeId}/stops`);
+      const data = await res.json();
+      stopSelect.innerHTML = "";
+
+      for (const s of data.stops) {
+        const opt = document.createElement("option");
+        opt.value = s.stop_id;
+        opt.textContent = `${s.stop_order}. ${s.stop_name}`;
+        stopSelect.appendChild(opt);
+      }
+    }
+
+    async function loadHourlyChart(routeId, dateStr) {
+      const selectedRoute = routesCache.find((r) => String(r.id) === String(routeId));
+      chartRouteBadge.textContent = selectedRoute
+        ? `${selectedRoute.code} — ${selectedRoute.name}`
+        : `Hat #${routeId}`;
+
+      const res = await fetch(`/api/v1/density/routes/${routeId}/hourly?target_date=${dateStr}`);
+      const items = await res.json();
+
+      const labels = items.map((x) => `${String(x.hour).padStart(2, "0")}:00`);
+      const totals = items.map((x) => x.total_passengers);
+
+      const maxVal = Math.max(...totals, 0);
+      const peakIdx = totals.indexOf(maxVal);
+      if (maxVal > 0 && peakIdx >= 0) {
+        kpiPeakHour.textContent = labels[peakIdx];
+        kpiPeakHourSub.textContent = `${maxVal} yolcu (${selectedRoute ? selectedRoute.code : ""})`;
+      } else {
+        kpiPeakHour.textContent = "—";
+        kpiPeakHourSub.textContent = "Bu gün kayıt yok";
+      }
+
+      const ctx = document.getElementById("hourlyChart").getContext("2d");
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "Binen Yolcu Sayısı",
+            data: totals,
+            backgroundColor: "#8b5cf6",
+            hoverBackgroundColor: "#6d28d9",
+            borderRadius: 6,
+            maxBarThickness: 28
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              grid: { display: false }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0 },
+              grid: { color: "#f3e8ff" }
+            }
+          }
+        }
+      });
+    }
+
+    async function loadRanking(dateStr, activeRouteId) {
+      const res = await fetch(`/api/v1/density/routes/ranking?target_date=${dateStr}`);
+      const rows = await res.json();
+      rankingList.innerHTML = "";
+
+      kpiDateLabel.textContent = `Tarih: ${dateStr}`;
+      const grandTotal = rows.reduce((acc, item) => acc + item.total_passengers, 0);
+      kpiTotalPassengers.textContent = grandTotal;
+
+      if (rows.length > 0 && rows[0].total_passengers > 0) {
+        kpiTopRoute.textContent = rows[0].route_code;
+        kpiTopRouteSub.textContent = `${rows[0].route_name} (${rows[0].total_passengers} yolcu)`;
+      } else {
+        kpiTopRoute.textContent = "—";
+        kpiTopRouteSub.textContent = "Bu gün yolcu kaydı yok";
+      }
+
+      if (!rows.length) {
+        rankingList.innerHTML = "<li class='ranking-item'>Kayıtlı hat bulunamadı.</li>";
+        return;
+      }
+
+      rows.forEach((r, idx) => {
+        const li = document.createElement("li");
+        li.className = "ranking-item" + (String(r.route_id) === String(activeRouteId) ? " active" : "");
+        li.innerHTML = `
+          <div class="rank-left">
+            <span class="rank-num">${idx + 1}</span>
+            <div>
+              <div class="rank-title">${r.route_code}</div>
+              <div class="rank-sub">${r.route_name}</div>
+            </div>
+          </div>
+          <span class="rank-badge">${r.total_passengers} yolcu</span>
+        `;
+
+        li.addEventListener("click", async () => {
+          routeSelect.value = String(r.route_id);
+          await loadStopsForRoute(r.route_id);
+          await refreshAnalytics();
+        });
+
+        rankingList.appendChild(li);
+      });
+    }
+
+    async function refreshAnalytics() {
+      const routeId = routeSelect.value;
+      const dateStr = analysisDate.value || todayStr;
+      if (!routeId) return;
+      await Promise.all([
+        loadHourlyChart(routeId, dateStr),
+        loadRanking(dateStr, routeId)
+      ]);
+    }
+
+    routeSelect.addEventListener("change", async () => {
+      await loadStopsForRoute(routeSelect.value);
+      await refreshAnalytics();
+    });
+
+    analysisDate.addEventListener("change", refreshAnalytics);
+    document.getElementById("refreshBtn").addEventListener("click", refreshAnalytics);
+
+    document.getElementById("recordForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const rawDt = document.getElementById("recordedAt").value;
+      const body = {
+        route_id: Number(routeSelect.value),
+        stop_id: Number(stopSelect.value),
+        passenger_count: Number(passengerInput.value),
+        recorded_at: rawDt ? new Date(rawDt).toISOString() : null
+      };
+
+      const res = await fetch("/api/v1/density/records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        showFeedback(data.detail || "Kayıt eklenemedi.", true);
+        return;
+      }
+
+      showFeedback(`Kayıt eklendi (#${data.id}) — ${data.passenger_count} yolcu.`);
+      await refreshAnalytics();
+    });
+
+    loadRoutes();
+  </script>
+</body>
+</html>

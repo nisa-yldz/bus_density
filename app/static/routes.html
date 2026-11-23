@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hat &amp; Durak Yönetimi — Bus Density Analysis</title>
+  <style>
+    :root {
+      --bg: #faf8ff;
+      --surface: #ffffff;
+      --surface-subtle: #f7f4fc;
+      --text: #1e1b2e;
+      --muted: #6b6480;
+      --border: #e9e2f5;
+      --accent: #6d28d9;
+      --accent-hover: #5b21b6;
+      --accent-soft: #f3e8ff;
+      --accent-border: #d8b4fe;
+      --ok-bg: #ecfdf5;
+      --ok-border: #a7f3d0;
+      --ok-text: #065f46;
+      --err-bg: #fef2f2;
+      --err-border: #fecaca;
+      --err-text: #991b1b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 28px 20px 44px;
+      line-height: 1.45;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 22px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .title-group h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #2e1065;
+    }
+
+    .title-group p {
+      margin: 4px 0 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .link-pill {
+      background: var(--surface);
+      color: var(--accent);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .link-pill:hover {
+      border-color: var(--accent-border);
+      background: var(--accent-soft);
+    }
+
+    .grid-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .grid-layout { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(109, 40, 217, 0.04);
+    }
+
+    .card + .card {
+      margin-top: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #2e1065;
+    }
+
+    .card-tag {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      padding: 3px 9px;
+      border-radius: 999px;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: #4c4363;
+      margin-bottom: 6px;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 9px;
+      border: 1px solid #ddd4f0;
+      font-size: 0.92rem;
+      background: var(--surface);
+      color: var(--text);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.16);
+    }
+
+    .primary-btn {
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 0.94rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .primary-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .feedback {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 9px;
+      font-size: 0.86rem;
+      display: none;
+      border: 1px solid transparent;
+    }
+
+    .feedback.ok {
+      display: block;
+      background: var(--ok-bg);
+      border-color: var(--ok-border);
+      color: var(--ok-text);
+    }
+
+    .feedback.err {
+      display: block;
+      background: var(--err-bg);
+      border-color: var(--err-border);
+      color: var(--err-text);
+    }
+
+    .stop-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .stop-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface-subtle);
+    }
+
+    .order-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      font-size: 0.82rem;
+      font-weight: 700;
+      background: var(--accent);
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .stop-name {
+      font-weight: 600;
+      font-size: 0.93rem;
+      color: #2e1065;
+    }
+
+    .empty-msg {
+      color: var(--muted);
+      font-size: 0.88rem;
+      padding: 12px;
+      text-align: center;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title-group">
+        <h1>Hat &amp; Durak Yönetimi</h1>
+        <p>Yeni hat ve durak tanımlama, güzergâh sırası oluşturma</p>
+      </div>
+      <div class="header-actions">
+        <a class="link-pill" href="/">← Yoğunluk Paneli</a>
+        <a class="link-pill" href="/docs" target="_blank">API Dokümantasyonu</a>
+      </div>
+    </header>
+
+    <div class="grid-layout">
+      <!-- Sol Kolon: Hat Ekleme + Durak Ekleme -->
+      <div>
+        <section class="card">
+          <div class="card-header">
+            <h2>Yeni Hat Ekle</h2>
+            <span class="card-tag">POST /routes</span>
+          </div>
+          <form id="addRouteForm">
+            <div class="field">
+              <label for="routeCode">Hat Kodu</label>
+              <input id="routeCode" type="text" placeholder="Örn: 500T" required />
+            </div>
+            <div class="field">
+              <label for="routeName">Hat Adı</label>
+              <input id="routeName" type="text" placeholder="Örn: Tuzla - Cevizlibağ" required />
+            </div>
+            <button type="submit" class="primary-btn">Hattı Kaydet</button>
+            <div id="routeFeedback" class="feedback" role="status"></div>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h2>Yeni Durak Ekle</h2>
+            <span class="card-tag">POST /stops</span>
+          </div>
+          <form id="addStopForm">
+            <div class="field">
+              <label for="stopName">Durak Adı</label>
+              <input id="stopName" type="text" placeholder="Örn: Kadıköy Rıhtım" required />
+            </div>
+            <button type="submit" class="primary-btn">Durağı Kaydet</button>
+            <div id="stopFeedback" class="feedback" role="status"></div>
+          </form>
+        </section>
+      </div>
+
+      <!-- Sağ Kolon: Hatta Durak Bağlama + Güzergâh Listesi -->
+      <div>
+        <section class="card">
+          <div class="card-header">
+            <h2>Hatta Durak Ekle</h2>
+            <span class="card-tag">POST /routes/{id}/stops</span>
+          </div>
+          <form id="assignStopForm">
+            <div class="field">
+              <label for="assignRouteSelect">Hat Seçimi</label>
+              <select id="assignRouteSelect" required></select>
+            </div>
+            <div class="field">
+              <label for="assignStopSelect">Durak Seçimi</label>
+              <select id="assignStopSelect" required></select>
+            </div>
+            <div class="field">
+              <label for="stopOrder">Güzergâh Sıra Numarası</label>
+              <input id="stopOrder" type="number" min="1" value="1" required />
+            </div>
+            <button type="submit" class="primary-btn">Durağı Hatta Bağla</button>
+            <div id="assignFeedback" class="feedback" role="status"></div>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h2>Güzergâh Durak Sırası</h2>
+            <span class="card-tag" id="selectedRouteBadge">Hat seçilmedi</span>
+          </div>
+          <ul id="routeStopsList" class="stop-list"></ul>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const assignRouteSelect = document.getElementById("assignRouteSelect");
+    const assignStopSelect = document.getElementById("assignStopSelect");
+    const stopOrderInput = document.getElementById("stopOrder");
+    const routeStopsList = document.getElementById("routeStopsList");
+    const selectedRouteBadge = document.getElementById("selectedRouteBadge");
+
+    function showFeedback(el, message, isError = false) {
+      el.textContent = message;
+      el.className = "feedback " + (isError ? "err" : "ok");
+    }
+
+    async function loadAllData(keepRouteId = null) {
+      const [routesRes, stopsRes] = await Promise.all([
+        fetch("/routes"),
+        fetch("/stops")
+      ]);
+
+      const routes = await routesRes.json();
+      const stops = await stopsRes.json();
+
+      assignRouteSelect.innerHTML = "";
+      for (const r of routes) {
+        const opt = document.createElement("option");
+        opt.value = r.id;
+        opt.textContent = `${r.code} — ${r.name}`;
+        assignRouteSelect.appendChild(opt);
+      }
+
+      if (keepRouteId && routes.some((r) => String(r.id) === String(keepRouteId))) {
+        assignRouteSelect.value = String(keepRouteId);
+      }
+
+      assignStopSelect.innerHTML = "";
+      for (const s of stops) {
+        const opt = document.createElement("option");
+        opt.value = s.id;
+        opt.textContent = `${s.name} (#${s.id})`;
+        assignStopSelect.appendChild(opt);
+      }
+
+      if (assignRouteSelect.value) {
+        await loadRouteStops(assignRouteSelect.value);
+      } else {
+        selectedRouteBadge.textContent = "Kayıtlı hat yok";
+        routeStopsList.innerHTML = "<li class='empty-msg'>Henüz kayıtlı hat bulunmuyor.</li>";
+      }
+    }
+
+    async function loadRouteStops(routeId) {
+      const res = await fetch(`/routes/${routeId}/stops`);
+      const data = await res.json();
+
+      selectedRouteBadge.textContent = `${data.route_code} — ${data.route_name}`;
+      routeStopsList.innerHTML = "";
+
+      if (!data.stops || data.stops.length === 0) {
+        stopOrderInput.value = 1;
+        routeStopsList.innerHTML = "<li class='empty-msg'>Bu hatta henüz durak atanmamış.</li>";
+        return;
+      }
+
+      const maxOrder = Math.max(...data.stops.map((s) => s.stop_order));
+      stopOrderInput.value = maxOrder + 1;
+
+      for (const s of data.stops) {
+        const li = document.createElement("li");
+        li.className = "stop-item";
+        li.innerHTML = `
+          <span class="order-badge">${s.stop_order}</span>
+          <span class="stop-name">${s.stop_name}</span>
+        `;
+        routeStopsList.appendChild(li);
+      }
+    }
+
+    assignRouteSelect.addEventListener("change", () => {
+      if (assignRouteSelect.value) {
+        loadRouteStops(assignRouteSelect.value);
+      }
+    });
+
+    document.getElementById("addRouteForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const feedback = document.getElementById("routeFeedback");
+      const code = document.getElementById("routeCode").value;
+      const name = document.getElementById("routeName").value;
+
+      const res = await fetch("/routes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, name })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        showFeedback(feedback, data.detail || "Hat eklenemedi.", true);
+        return;
+      }
+
+      showFeedback(feedback, `Hat eklendi: ${data.code} — ${data.name}`);
+      e.target.reset();
+      await loadAllData(data.id);
+    });
+
+    document.getElementById("addStopForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const feedback = document.getElementById("stopFeedback");
+      const name = document.getElementById("stopName").value;
+      const currentRoute = assignRouteSelect.value;
+
+      const res = await fetch("/stops", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        showFeedback(feedback, data.detail || "Durak eklenemedi.", true);
+        return;
+      }
+
+      showFeedback(feedback, `Durak eklendi: ${data.name}`);
+      e.target.reset();
+      await loadAllData(currentRoute);
+      assignStopSelect.value = String(data.id);
+    });
+
+    document.getElementById("assignStopForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const feedback = document.getElementById("assignFeedback");
+      const routeId = assignRouteSelect.value;
+      const stopId = Number(assignStopSelect.value);
+      const stopOrder = Number(stopOrderInput.value);
+
+      const res = await fetch(`/routes/${routeId}/stops`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stop_id: stopId, stop_order: stopOrder })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        showFeedback(feedback, data.detail || "Durak hatta bağlanamadı.", true);
+        return;
+      }
+
+      showFeedback(feedback, `${stopOrder}. sıraya durak eklendi.`);
+      await loadRouteStops(routeId);
+    });
+
+    loadAllData();
+  </script>
+</body>
+</html>
